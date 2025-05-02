@@ -193,7 +193,7 @@
       const resultDiv = document.getElementById("result");
       resultDiv.innerHTML = `
         <p>📌 기준 열관류율: <b>${U_target} W/㎡·K</b></p>
-        <p>📐 현재 벽체 R값: <b>${R_wall.toFixed(3)} m²·K/W</b></p>
+        <p>🧮 현재 벽체 열관류율 (U): <b>${(1 / R_wall).toFixed(3)} W/㎡·K</b></p>
         <p>🎯 필요한 λ ≤ <b>${lambda_max.toFixed(3)} W/m·K</b></p>
       `;
 
