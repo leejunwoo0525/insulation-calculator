@@ -1,3 +1,5 @@
+# 통합 HTML + PDF 저장 버튼 + 등급별 색상 적용
+pdf_and_grade_html = """
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -12,12 +14,15 @@
     button { margin: 10px 5px; padding: 6px 16px; }
     tr.selected { background-color: #e0f0ff; }
     #result { margin-top: 30px; }
+    .grade-A { background-color: #d4f8cc; }
+    .grade-B { background-color: #fff8b2; }
+    .grade-C { background-color: #ffe0b2; }
+    .grade-D { background-color: #f8cccc; }
   </style>
 </head>
 <body>
   <h2>📦 단열재 추천 및 열관류율 계산기</h2>
 
-  <!-- 지역, 부위 선택 -->
   <label>지역:
     <select id="region">
       <option value="중부1">중부1지역</option>
@@ -35,7 +40,6 @@
     </select>
   </label>
 
-  <!-- 재료 선택 UI -->
   <h3>🎯 적용할 재료 선택</h3>
   <select id="materialSelect" onchange="updateMaterialLambda()">
     <option value="">-- 재료 선택 --</option>
@@ -48,7 +52,6 @@
   <input type="text" id="lambdaValue" placeholder="λ 자동입력" readonly />
   <button onclick="applyMaterialToRow()">선택 레이어에 적용</button>
 
-  <!-- 벽체 레이어 테이블 -->
   <h3>📐 벽체 레이어 구성</h3>
   <table id="layerTable">
     <thead>
@@ -87,10 +90,10 @@
 
   <button onclick="addRow()">레이어 추가</button>
 
-  <!-- 단열재 정보 -->
   <label>단열재 두께 (mm):</label>
   <input type="number" id="insulationThickness" />
   <button onclick="calculate()">계산 및 추천</button>
+  <button onclick="window.print()">📄 PDF로 저장</button>
 
   <div id="result"></div>
 
@@ -172,6 +175,13 @@
       }
     }
 
+    function getGradeClass(lambda) {
+      if (lambda <= 0.034) return 'grade-A';
+      if (lambda <= 0.040) return 'grade-B';
+      if (lambda <= 0.046) return 'grade-C';
+      return 'grade-D';
+    }
+
     function calculate() {
       const region = document.getElementById('region').value;
       const zone = document.getElementById('zone').value;
@@ -188,8 +198,6 @@
       const R_needed = R_required - R_wall;
       const lambda_max = thickness / R_needed;
 
-      const candidates = Object.entries(insulationDB).filter(([_, lambda]) => lambda <= lambda_max);
-
       const resultDiv = document.getElementById("result");
       resultDiv.innerHTML = `
         <p>📌 기준 열관류율: <b>${U_target} W/㎡·K</b></p>
@@ -197,14 +205,32 @@
         <p>🎯 필요한 λ ≤ <b>${lambda_max.toFixed(3)} W/m·K</b></p>
       `;
 
-      if (candidates.length === 0) {
+      const resultList = document.createElement('ul');
+
+      let count = 0;
+      for (const [name, lambda] of Object.entries(insulationDB)) {
+        if (lambda <= lambda_max) {
+          const li = document.createElement('li');
+          li.className = getGradeClass(lambda);
+          li.innerHTML = `${name} (λ=${lambda})`;
+          resultList.appendChild(li);
+          count++;
+        }
+      }
+
+      if (count === 0) {
         resultDiv.innerHTML += `<p>❌ 조건을 만족하는 단열재가 없습니다.</p>`;
       } else {
-        resultDiv.innerHTML += `<h3>✅ 추천 단열재</h3><ul>` +
-          candidates.map(([name, lambda]) => `<li>${name} (λ=${lambda})</li>`).join('') +
-          `</ul>`;
+        resultDiv.innerHTML += `<h3>✅ 추천 단열재</h3>`;
+        resultDiv.appendChild(resultList);
       }
     }
   </script>
 </body>
 </html>
+"""
+
+# 저장
+final_color_pdf_path = Path("/mnt/data/index_pdf_등급색.html")
+final_color_pdf_path.write_text(pdf_and_grade_html, encoding="utf-8")
+final_color_pdf_path.name
