@@ -214,28 +214,6 @@ function calculate() {
     <p>📌 기준 열관류율: <b>${U_target} W/㎡·K</b></p>
     <p>🧮 현재 벽체 열관류율 (U): <b>${(1 / R_wall).toFixed(3)} W/㎡·K</b></p>
     <p>🎯 필요한 λ ≤ <b>${lambda_max.toFixed(3)} W/m·K</b></p>
-    <h3>✅ 추천 단열재 (이름순)</h3>
-  `;
-
-  const ul = document.createElement("ul");
-  insulationList
-    .filter(ins => ins.lambda <= lambda_max)
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .forEach(ins => {
-      const li = document.createElement("li");
-      li.textContent = `${ins.name} (λ=${ins.lambda}, ${ins.grade}, ${ins.price}원/㎡)`;
-      li.className = getGradeClass(ins.lambda);
-      ul.appendChild(li);
-    });
-  resultDiv.appendChild(ul);
-} R_wall;
-  const lambda_max = thickness / R_needed;
-
-  const resultDiv = document.getElementById("result");
-  resultDiv.innerHTML = `
-    <p>📌 기준 열관류율: <b>${U_target} W/㎡·K</b></p>
-    <p>🧮 현재 벽체 열관류율 (U): <b>${(1 / R_wall).toFixed(3)} W/㎡·K</b></p>
-    <p>🎯 필요한 λ ≤ <b>${lambda_max.toFixed(3)} W/m·K</b></p>
     <h3>✅ 추천 단열재</h3>
   `;
 
@@ -249,13 +227,6 @@ function calculate() {
     }
   }
   resultDiv.appendChild(ul);
-}
-
-function getGradeClass(lambda) {
-  if (lambda <= 0.034) return 'grade-A';
-  if (lambda <= 0.040) return 'grade-B';
-  if (lambda <= 0.046) return 'grade-C';
-  return 'grade-D';
 }
 
 updateInsulationTable();
