@@ -133,16 +133,19 @@ function updateResistance(input) {
 
 function addRow() {
   const tbody = document.querySelector("#layerTable tbody");
-  const datalistHTML = document.getElementById("insulationNames").innerHTML;
   const row = document.createElement("tr");
+  row.setAttribute("onclick", "selectRow(this)");
   row.innerHTML = `
-    <td><input type="text" list="insulationNames" placeholder="재료명 입력 또는 선택" onchange="fillFromInput(this)"></td>
+    <td>
+      <input type="text" list="insulationNames" placeholder="재료명 입력 또는 선택" oninput="fillFromInput(this)">
+    </td>
     <td><input type="number" oninput="updateResistance(this)"></td>
     <td><input type="number" oninput="updateResistance(this)"></td>
     <td><input class="resistance" type="number" readonly></td>
     <td><button onclick="removeRow(this)">삭제</button></td>
   `;
-  tbody.insertBefore(row, tbody.lastElementChild);
+  const rows = tbody.querySelectorAll("tr");
+  tbody.insertBefore(row, rows[rows.length - 1]);
 }
 
 function removeRow(btn) {
