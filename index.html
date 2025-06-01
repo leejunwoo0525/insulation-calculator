@@ -48,12 +48,18 @@
         <td></td>
       </tr>
       <tr onclick="selectRow(this)">
-        <td><input type="text" /></td>
-        <td><input type="number" oninput="updateResistance(this)" /></td>
-        <td><input type="number" oninput="updateResistance(this)" /></td>
-        <td><input type="number" class="resistance" readonly /></td>
-        <td><button onclick="removeRow(this)">삭제</button></td>
-      </tr>
+  <td>
+    <select onchange="autoFillMaterial(this)">
+      <option value="">선택</option>
+      <option value="manual">직접입력</option>
+    </select><br/>
+    <input type="text" placeholder="재료명" disabled />
+  </td>
+  <td><input type="number" oninput="updateResistance(this)" /></td>
+  <td><input type="number" oninput="updateResistance(this)" disabled /></td>
+  <td><input type="number" readonly class="resistance" /></td>
+  <td><button onclick="removeRow(this)">삭제</button></td>
+</tr>
       <tr class="fixed-layer">
         <td><input type="text" value="실내 열전달저항" readonly></td>
         <td><input type="number" value="0" readonly></td>
@@ -100,6 +106,29 @@
 </div>
 
 <script>
+  function autoFillMaterial(selectElement) {
+  const selectedValue = selectElement.value;
+  const row = selectElement.closest("tr");
+  const nameInput = row.cells[0].querySelector('input[type="text"]');
+  const lambdaInput = row.cells[2].querySelector('input');
+
+  if (selectedValue === "manual" || selectedValue === "") {
+    nameInput.disabled = false;
+    lambdaInput.disabled = false;
+    nameInput.value = "";
+    lambdaInput.value = "";
+  } else {
+    const material = insulationList.find(i => i.name === selectedValue);
+    if (material) {
+      nameInput.disabled = true;
+      lambdaInput.disabled = true;
+      nameInput.value = material.name;
+      lambdaInput.value = material.lambda;
+      updateResistance(lambdaInput);
+    }
+  }
+}
+
 const uStandardTable = {
   '외벽': { '중부1': 0.15, '중부2': 0.17, '남부': 0.22, '제주': 0.29 },
   '지붕': { '중부1': 0.15, '중부2': 0.18, '남부': 0.25, '제주': 0.25 },
@@ -169,6 +198,14 @@ function selectRow(row) {
 function updateInsulationTable() {
   const tbody = document.querySelector("#insulationTable tbody");
   tbody.innerHTML = "";
+  document.querySelectorAll("select").forEach(select => {
+  for (const item of insulationList) {
+    const option = document.createElement("option");
+    option.value = item.name;
+    option.textContent = item.name;
+    select.appendChild(option);
+  }
+});
   for (const item of insulationList) {
     const row = `<tr><td>${item.name}</td><td>${item.lambda}</td><td>${item.grade}</td><td>${item.price}</td></tr>`;
     tbody.insertAdjacentHTML('beforeend', row);
