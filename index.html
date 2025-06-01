@@ -1,87 +1,223 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1" name="viewport"/>
-<title>단열재 추천 계산기</title>
-<style>body{font-family:sans-serif;padding:20px}.tab{display:none}.tab.active{display:block}button.tab-btn{margin-right:10px;padding:10px 20px}table{border-collapse:collapse;width:100%;margin-top:10px}th,td{border:1px solid #ccc;padding:6px 10px;text-align:center}input,select{width:140px}.grade-A{background-color:#d4f8cc}.grade-B{background-color:#fff8b2}.grade-C{background-color:#ffe0b2}.grade-D{background-color:#f8cccc}#result{margin-top:30px}</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>단열재 추천 계산기</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .tab { display: none; }
+    .tab.active { display: block; }
+    button.tab-btn { margin-right: 10px; padding: 10px 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: center; }
+    input, select { width: 140px; }
+    .grade-A { background-color: #d4f8cc; }
+    .grade-B { background-color: #fff8b2; }
+    .grade-C { background-color: #ffe0b2; }
+    .grade-D { background-color: #f8cccc; }
+    #result { margin-top: 30px; }
+  </style>
 </head>
 <body>
-<h2>📦 단여재 추천 곀산기</h2>
-<div><button class="tab-btn" onclick="switchTab('calculator')">곀산기</button><button class="tab-btn" onclick="switchTab('database')">단여재 목록</button></div>
+<h2>📦 단열재 추천 계산기</h2>
+<div>
+  <button class="tab-btn" onclick="switchTab('calculator')">계산기</button>
+  <button class="tab-btn" onclick="switchTab('database')">단열재 목록</button>
+</div>
+
+<!-- 계산기 탭 -->
 <div class="tab active" id="calculator">
-<h3>📐 벽체 레이어 구성</h3>
-<table id="layerTable">
-<thead><tr><th>재료명</th><th>두기 (mm)</th><th>엘전도율 λ</th><th>엘저하 R</th><th>삭제</th></tr></thead>
-<tbody>
-<tr class="fixed-layer"><td><input type="text" readonly value="실외 엘전달저항"></td><td><input type="number" readonly value="0"></td><td><input type="text" readonly value="-"></td><td><input class="resistance" type="number" readonly value="0.043"></td><td></td></tr>
-<tr onclick="selectRow(this)">
-<td><input type="text" list="insulationNames" placeholder="재료명 입력 또는 선택" oninput="fillFromInput(this)"></td>
-<td><input type="number" oninput="updateResistance(this)"></td>
-<td><input type="number" oninput="updateResistance(this)"></td>
-<td><input class="resistance" type="number" readonly></td>
-<td><button onclick="removeRow(this)">삭제</button></td>
-</tr>
-<tr class="fixed-layer"><td><input type="text" readonly value="실내 엘전달저항"></td><td><input type="number" readonly value="0"></td><td><input type="text" readonly value="-"></td><td><input class="resistance" type="number" readonly value="0.11"></td><td></td></tr>
-</tbody>
-</table>
-<datalist id="insulationNames"></datalist>
-<button onclick="addRow()">레이어 추가</button>
-<h4>단여재 두기 (mm): <input id="insulationThickness" type="number"/></h4>
-<h4>지역: <select id="region"><option value="중부1">중부1</option><option value="중부2">중부2</option><option value="남부">남부</option><option value="제주">제주</option></select>부위: <select id="zone"><option value="외벽">외벽</option><option value="지부">지부</option><option value="바닥">바닥</option></select></h4>
-<button onclick="calculate()">추천</button> <button onclick="window.print()">📄 PDF 저장</button>
-<div id="result"></div>
+  <h3>📐 벽체 레이어 구성</h3>
+  <table id="layerTable">
+    <thead>
+      <tr>
+        <th>재료명</th>
+        <th>두께 (mm)</th>
+        <th>열전도율 λ</th>
+        <th>열저항 R</th>
+        <th>삭제</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="fixed-layer">
+        <td><input type="text" readonly value="실외 열전달저항"></td>
+        <td><input type="number" readonly value="0"></td>
+        <td><input type="text" readonly value="-"></td>
+        <td><input class="resistance" type="number" readonly value="0.043"></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>
+          <input type="text" list="insulationNames" placeholder="재료명 입력 또는 선택" onchange="fillFromInput(this)">
+          <datalist id="insulationNames"></datalist>
+        </td>
+        <td><input type="number" oninput="updateResistance(this)"></td>
+        <td><input type="number" oninput="updateResistance(this)"></td>
+        <td><input class="resistance" type="number" readonly></td>
+        <td><button onclick="removeRow(this)">삭제</button></td>
+      </tr>
+      <tr class="fixed-layer">
+        <td><input type="text" readonly value="실내 열전달저항"></td>
+        <td><input type="number" readonly value="0"></td>
+        <td><input type="text" readonly value="-"></td>
+        <td><input class="resistance" type="number" readonly value="0.11"></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <button onclick="addRow()">레이어 추가</button>
+  <h4>단열재 두께 (mm): <input id="insulationThickness" type="number"/></h4>
+  <h4>지역: 
+    <select id="region">
+      <option value="중부1">중부1</option>
+      <option value="중부2">중부2</option>
+      <option value="남부">남부</option>
+      <option value="제주">제주</option>
+    </select>
+    부위:
+    <select id="zone">
+      <option value="외벽">외벽</option>
+      <option value="지붕">지붕</option>
+      <option value="바닥">바닥</option>
+    </select>
+  </h4>
+  <button onclick="calculate()">추천</button>
+  <button onclick="window.print()">📄 PDF 저장</button>
+  <div id="result"></div>
 </div>
+
+<!-- 단열재 목록 탭 -->
 <div class="tab" id="database">
-<h3>📋 단여재 목록</h3>
-<table id="insulationTable"><thead><tr><th>이름</th><th>λ</th><th>등급</th><th>가격</th></tr></thead><tbody></tbody></table>
-<h4>➕ 단여재 추가</h4>
-<input id="newName" placeholder="이름" type="text"/>
-<input id="newLambda" placeholder="λ (W/m·K)" type="number"/>
-<input id="newGrade" placeholder="등급" type="text"/>
-<input id="newPrice" placeholder="가격(원/㎡)" type="number"/>
-<button onclick="addCustomInsulation()">추가</button>
+  <h3>📋 단열재 목록</h3>
+  <table id="insulationTable">
+    <thead><tr><th>이름</th><th>λ</th><th>등급</th><th>가격</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <h4>➕ 단열재 추가</h4>
+  <input id="newName" placeholder="이름" type="text"/>
+  <input id="newLambda" placeholder="λ (W/m·K)" type="number"/>
+  <input id="newGrade" placeholder="등급" type="text"/>
+  <input id="newPrice" placeholder="가격(원/㎡)" type="number"/>
+  <button onclick="addCustomInsulation()">추가</button>
 </div>
+
 <script>
-const insulationList = [
-  {name:"PF보드 A",lambda:0.019,grade:"불연",perm:0.2,price:22000},
-  {name:"경질우레탄 B",lambda:0.025,grade:"준불연",perm:0.5,price:18000},
-  {name:"XPS C",lambda:0.034,grade:"난연",perm:1.5,price:11000},
-  {name:"진공단열 D",lambda:0.005,grade:"불연",perm:0.01,price:50000},
-  {name:"EPS E",lambda:0.038,grade:"난연",perm:2.0,price:8000},
-  {name:"EPS 난연 F",lambda:0.035,grade:"난연",perm:1.5,price:9000},
-  {name:"에어로겔 G",lambda:0.015,grade:"불연",perm:0.05,price:60000},
-  {name:"PIR보드 H",lambda:0.021,grade:"준불연",perm:0.3,price:23000},
-  {name:"미네랄울 I",lambda:0.037,grade:"불연",perm:0.3,price:15000},
-  {name:"그라스울 J",lambda:0.038,grade:"불연",perm:0.4,price:14000}
+const uStandardTable = {
+  '외벽': { '중부1': 0.15, '중부2': 0.17, '남부': 0.22, '제주': 0.29 },
+  '지붕': { '중부1': 0.15, '중부2': 0.18, '남부': 0.25, '제주': 0.25 },
+  '바닥': { '중부1': 0.15, '중부2': 0.17, '남부': 0.22, '제주': 0.29 }
+};
+
+let insulationList = [
+  {name: "PF보드 A", lambda: 0.019, grade: "불연", price: 22000},
+  {name: "경질우레탄 B", lambda: 0.025, grade: "준불연", price: 18000},
+  {name: "XPS C", lambda: 0.034, grade: "난연", price: 11000},
+  {name: "진공단열 D", lambda: 0.005, grade: "불연", price: 50000},
+  {name: "EPS E", lambda: 0.038, grade: "난연", price: 8000}
 ];
-function updateDatalist(){
-  const list=document.getElementById("insulationNames");
-  list.innerHTML="";
-  insulationList.forEach(i=>{
-    const opt=document.createElement("option");
-    opt.value=i.name;
-    list.appendChild(opt);
-  })
+
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
 }
-function fillFromInput(input){
-  const value=input.value;
-  const row=input.closest("tr");
-  const insulation=insulationList.find(i=>i.name===value);
-  if(insulation){
-    const lambdaInput=row.cells[2].querySelector('input');
-    lambdaInput.value=insulation.lambda;
-    updateResistance(lambdaInput);
+
+function updateResistance(input) {
+  const row = input.closest("tr");
+  const t = parseFloat(row.cells[1].querySelector('input').value) / 1000;
+  const l = parseFloat(row.cells[2].querySelector('input').value);
+  const R = row.cells[3].querySelector('input');
+  if (!isNaN(t) && !isNaN(l) && l > 0) R.value = (t / l).toFixed(3);
+  else R.value = '';
+}
+
+function addRow() {
+  const tbody = document.querySelector("#layerTable tbody");
+  const datalistHTML = document.getElementById("insulationNames").innerHTML;
+  const row = document.createElement("tr");
+  row.innerHTML = `
+    <td><input type="text" list="insulationNames" placeholder="재료명 입력 또는 선택" onchange="fillFromInput(this)"></td>
+    <td><input type="number" oninput="updateResistance(this)"></td>
+    <td><input type="number" oninput="updateResistance(this)"></td>
+    <td><input class="resistance" type="number" readonly></td>
+    <td><button onclick="removeRow(this)">삭제</button></td>
+  `;
+  tbody.insertBefore(row, tbody.lastElementChild);
+}
+
+function removeRow(btn) {
+  const row = btn.closest("tr");
+  row.remove();
+}
+
+function updateInsulationTable() {
+  const tbody = document.querySelector("#insulationTable tbody");
+  tbody.innerHTML = "";
+  const datalist = document.getElementById("insulationNames");
+  datalist.innerHTML = "";
+  for (const item of insulationList) {
+    tbody.innerHTML += `<tr><td>${item.name}</td><td>${item.lambda}</td><td>${item.grade}</td><td>${item.price}</td></tr>`;
+    datalist.innerHTML += `<option value="${item.name}">`;
   }
 }
-function addRow(){
-  const tbody=document.querySelector("#layerTable tbody");
-  const row=document.createElement("tr");
-  row.setAttribute("onclick","selectRow(this)");
-  row.innerHTML='<td><input type="text" list="insulationNames" placeholder="재료명 입력 또는 선택" oninput="fillFromInput(this)"></td><td><input type="number" oninput="updateResistance(this)"></td><td><input type="number" oninput="updateResistance(this)"></td><td><input class="resistance" type="number" readonly></td><td><button onclick="removeRow(this)">삭제</button></td>';
-  tbody.insertBefore(row,tbody.lastElementChild);
-  updateDatalist();
+
+function addCustomInsulation() {
+  const name = document.getElementById("newName").value;
+  const lambda = parseFloat(document.getElementById("newLambda").value);
+  const grade = document.getElementById("newGrade").value;
+  const price = parseFloat(document.getElementById("newPrice").value);
+  if (!name || isNaN(lambda)) {
+    alert("이름과 λ를 정확히 입력하세요.");
+    return;
+  }
+  insulationList.push({name, lambda, grade, price});
+  updateInsulationTable();
 }
-updateDatalist();
+
+function calculate() {
+  const region = document.getElementById('region').value;
+  const zone = document.getElementById('zone').value;
+  const thickness = parseFloat(document.getElementById('insulationThickness').value) / 1000;
+
+  let R_wall = 0;
+  document.querySelectorAll(".resistance").forEach(r => {
+    const val = parseFloat(r.value);
+    if (!isNaN(val)) R_wall += val;
+  });
+
+  const U_target = uStandardTable[zone][region];
+  const R_required = 1 / U_target;
+  const R_needed = R_required - R_wall;
+  const lambda_max = thickness / R_needed;
+
+  const resultDiv = document.getElementById("result");
+  resultDiv.innerHTML = `<p>📌 기준 열관류율: <b>${U_target} W/㎡·K</b></p>
+    <p>🧮 현재 벽체 열관류율 (U): <b>${(1 / R_wall).toFixed(3)} W/㎡·K</b></p>
+    <p>🎯 필요한 λ ≤ <b>${lambda_max.toFixed(3)} W/m·K</b></p>
+    <h3>✅ 추천 단열재</h3>`;
+
+  const ul = document.createElement("ul");
+  for (const ins of insulationList) {
+    if (ins.lambda <= lambda_max) {
+      const li = document.createElement("li");
+      li.textContent = `${ins.name} (λ=${ins.lambda}, ${ins.grade}, ${ins.price}원/㎡)`;
+      ul.appendChild(li);
+    }
+  }
+  resultDiv.appendChild(ul);
+}
+
+function fillFromInput(input) {
+  const value = input.value;
+  const row = input.closest("tr");
+  const insulation = insulationList.find(ins => ins.name === value);
+  if (insulation) {
+    row.cells[2].querySelector('input').value = insulation.lambda;
+    updateResistance(row.cells[2].querySelector('input'));
+  }
+}
+
+updateInsulationTable();
 </script>
-</body></html>
+</body>
+</html>
