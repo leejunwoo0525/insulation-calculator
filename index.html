@@ -28,6 +28,7 @@
 
 <div class="tab active" id="calculator">
   <h3>📐 벽체 레이어 구성</h3>
+  <datalist id="insulationNames"></datalist>
   <table id="layerTable">
     <thead>
       <tr>
@@ -46,14 +47,12 @@
         <td><input class="resistance" type="number" readonly value="0.043"></td>
         <td></td>
       </tr>
-      <tr>
-        <td>
-          <input type="text" list="insulationNames" placeholder="재료명 입력 또는 선택" 
+      <tr> <td>
+          <input type="text" list="insulationNames" placeholder="재료명 입력 또는 선택"
                  onchange="fillFromInput(this)"
-                 onfocus="handleMaterialFocus(this)" 
+                 onfocus="handleMaterialFocus(this)"
                  onblur="handleMaterialBlur(this)">
-          <datalist id="insulationNames"></datalist>
-        </td>
+          </td>
         <td><input type="number" oninput="updateResistance(this)"></td>
         <td><input type="number" oninput="updateResistance(this)"></td>
         <td><input class="resistance" type="number" readonly></td>
@@ -70,7 +69,7 @@
   </table>
   <button onclick="addRow()">레이어 추가</button>
   <h4>단열재 두께 (mm): <input id="insulationThickness" type="number"/></h4>
-  <h4>지역: 
+  <h4>지역:
     <select id="region">
       <option value="중부1">중부1</option>
       <option value="중부2">중부2</option>
@@ -97,7 +96,7 @@
   </table>
   <h4>➕ 단열재 추가</h4>
   <input id="newName" placeholder="이름" type="text"/>
-  <input id="newLambda" placeholder="λ (W/m·K)" type="number"/>
+  <input id="newLambda" placeholder="λ (W/m·K)" type="number" step="0.001"/>
   <input id="newGrade" placeholder="등급" type="text"/>
   <input id="newPrice" placeholder="가격(원/㎡)" type="number"/>
   <button onclick="addCustomInsulation()">추가</button>
@@ -134,7 +133,8 @@ function handleMaterialBlur(inputElement) {
             inputElement.value = materialInputOriginalValue; // 원래 재료명으로 복원
             fillFromInput(inputElement); // 복원된 재료명에 따라 람다 등 업데이트
         }
-    }, 0); 
+        // materialInputOriginalValue = ''; // 여기서 초기화하면 다른 input 간섭 가능성 있음. focus 시마다 설정.
+    }, 0);
 }
 
 function fillFromInput(input) { // input은 재료명 input element
@@ -162,68 +162,103 @@ function switchTab(id) {
 
 function updateResistance(input) {
   const row = input.closest("tr");
-  const t = parseFloat(row.cells[1].querySelector('input').value) / 1000; // 두께
-  const l = parseFloat(row.cells[2].querySelector('input').value); // 열전도율
+  // input이 속한 행의 두께(cells[1])와 열전도율(cells[2]) input을 찾음
+  const thicknessInput = row.cells[1].querySelector('input');
+  const lambdaInput = row.cells[2].querySelector('input'); // 이 input이 oninput을 호출한 주체일 수 있음
+
+  const t = parseFloat(thicknessInput.value) / 1000; // 두께 mm to m
+  const l = parseFloat(lambdaInput.value);         // 열전도율
   const R_input = row.cells[3].querySelector('input'); // 열저항 input
-  if (!isNaN(t) && !isNaN(l) && l > 0 && t >= 0) { // 두께는 0 이상이어야 함
+
+  if (!isNaN(t) && t >= 0 && !isNaN(l) && l > 0) {
     R_input.value = (t / l).toFixed(3);
   } else {
-    R_input.value = '';
+    R_input.value = ''; // 유효하지 않으면 열저항 값 비움
   }
 }
+
 
 function addRow() {
   const tbody = document.querySelector("#layerTable tbody");
   const row = document.createElement("tr");
-  // row.setAttribute("onclick", "selectRow(this)"); // 이 함수는 정의되지 않았으므로 제거
   row.innerHTML = `
     <td>
-      <input type="text" list="insulationNames" placeholder="재료명 입력 또는 선택" 
-             onchange="fillFromInput(this)" 
-             onfocus="handleMaterialFocus(this)" 
+      <input type="text" list="insulationNames" placeholder="재료명 입력 또는 선택"
+             onchange="fillFromInput(this)"
+             onfocus="handleMaterialFocus(this)"
              onblur="handleMaterialBlur(this)">
     </td>
     <td><input type="number" oninput="updateResistance(this)"></td>
-    <td><input type="number" oninput="updateResistance(this)"></td>
+    <td><input type="number" oninput="updateResistance(this)" step="0.001"></td>
     <td><input class="resistance" type="number" readonly></td>
     <td><button onclick="removeRow(this)">삭제</button></td>
   `;
   const rows = tbody.querySelectorAll("tr");
-  tbody.insertBefore(row, rows[rows.length - 1]); // 마지막 고정행 바로 위에 삽입
+  tbody.insertBefore(row, rows[rows.length - 1]); // 마지막 고정행(실내 열전달저항) 바로 위에 삽입
 }
 
 function removeRow(btn) {
   const row = btn.closest("tr");
-  row.remove();
+  // 고정된 행은 삭제하지 않도록 방지 (선택 사항, 현재는 class로 구분 가능)
+  if (!row.classList.contains('fixed-layer')) {
+      row.remove();
+  }
 }
 
 function updateInsulationTable() {
   const tbody = document.querySelector("#insulationTable tbody");
-  tbody.innerHTML = "";
+  tbody.innerHTML = ""; // 기존 목록 비우기
   const datalist = document.getElementById("insulationNames");
+  if (!datalist) { // 혹시 datalist가 없는 경우를 대비 (정상적으론 항상 있어야 함)
+      console.error("Datalist 요소를 찾을 수 없습니다.");
+      return;
+  }
   datalist.innerHTML = ""; // 기존 옵션 초기화
+
+  // insulationList를 lambda 값 기준으로 오름차순 정렬 (선택 사항)
+  // insulationList.sort((a, b) => a.lambda - b.lambda);
+
   for (const item of insulationList) {
-    tbody.innerHTML += `<tr><td>${item.name}</td><td>${item.lambda}</td><td>${item.grade}</td><td>${item.price}</td></tr>`;
+    tbody.innerHTML += `<tr><td><span class="math-inline">\{item\.name\}</td\><td\></span>{item.lambda}</td><td><span class="math-inline">\{item\.grade \|\| '\-'\}</td\><td\></span>{item.price !== undefined ? item.price : '-'}</td></tr>`;
     datalist.innerHTML += `<option value="${item.name}">`;
   }
 }
 
 function addCustomInsulation() {
-  const name = document.getElementById("newName").value;
-  const lambda = parseFloat(document.getElementById("newLambda").value);
-  const grade = document.getElementById("newGrade").value;
-  const price = parseFloat(document.getElementById("newPrice").value);
-  if (!name || isNaN(lambda) || lambda <= 0) { // 이름, lambda 유효성 검사 (lambda는 0보다 커야 함)
-    alert("이름과 유효한 λ 값을 정확히 입력하세요.");
+  const nameInput = document.getElementById("newName");
+  const lambdaInput = document.getElementById("newLambda");
+  const gradeInput = document.getElementById("newGrade");
+  const priceInput = document.getElementById("newPrice");
+
+  const name = nameInput.value.trim();
+  const lambda = parseFloat(lambdaInput.value);
+  const grade = gradeInput.value.trim();
+  const price = parseFloat(priceInput.value);
+
+  if (!name) {
+    alert("단열재 이름을 입력하세요.");
+    nameInput.focus();
     return;
   }
-  insulationList.push({name, lambda, grade, price: price || 0 }); // 가격이 없으면 0으로
-  updateInsulationTable();
+  if (isNaN(lambda) || lambda <= 0) {
+    alert("유효한 열전도율(λ) 값을 입력하세요 (0보다 큰 숫자).");
+    lambdaInput.focus();
+    return;
+  }
+  if (insulationList.some(item => item.name.toLowerCase() === name.toLowerCase())) {
+    alert("이미 존재하는 단열재 이름입니다.");
+    nameInput.focus();
+    return;
+  }
+
+  insulationList.push({name, lambda, grade: grade || undefined, price: isNaN(price) ? undefined : price});
+  updateInsulationTable(); // 목록 및 datalist 업데이트
+
   // 입력 필드 초기화
-  document.getElementById("newName").value = '';
-  document.getElementById("newLambda").value = '';
-  document.getElementById("newGrade").value = '';
-  document.getElementById("newPrice").value = '';
+  nameInput.value = '';
+  lambdaInput.value = '';
+  gradeInput.value = '';
+  priceInput.value = '';
 }
 
 function calculate() {
@@ -238,100 +273,60 @@ function calculate() {
     return;
   }
 
-  let R_wall_parts = 0; // 단열재 외 다른 레이어들의 열저항 합
-  let hasUserLayer = false;
-  // 첫 번째 행(실외 열전달저항)과 마지막 행(실내 열전달저항)을 제외하고,
-  // 사용자가 추가한 레이어들 중에서 재료명, 두께, 열전도율이 모두 입력된 것만 계산
-  const layerRows = document.querySelectorAll("#layerTable tbody tr");
-  layerRows.forEach((row, index) => {
-    if (!row.classList.contains('fixed-layer')) {
-        hasUserLayer = true;
-        const materialNameInput = row.cells[0].querySelector('input');
-        const thicknessInput = row.cells[1].querySelector('input');
-        const lambdaInput = row.cells[2].querySelector('input');
-        const resistanceInput = row.cells[3].querySelector('input'); // 이미 계산된 열저항 값
+  let R_wall_parts = 0; // 사용자가 구성한 레이어들의 열저항 합 (고정 저항 제외)
+  let userLayersValid = false; // 사용자가 유효한 레이어를 하나라도 구성했는지 확인
 
-        // 재료명, 두께, 람다가 모두 채워져 계산된 저항값이 있다면 사용
-        if (materialNameInput && materialNameInput.value && 
-            thicknessInput && !isNaN(parseFloat(thicknessInput.value)) &&
-            lambdaInput && !isNaN(parseFloat(lambdaInput.value)) &&
-            resistanceInput && !isNaN(parseFloat(resistanceInput.value)) ) {
-            R_wall_parts += parseFloat(resistanceInput.value);
+  const layerRows = Array.from(document.querySelectorAll("#layerTable tbody tr"));
+
+  for (const row of layerRows) {
+    if (row.classList.contains('fixed-layer')) {
+        const fixedResistanceInput = row.cells[3].querySelector('input.resistance');
+        if (fixedResistanceInput) {
+            const val = parseFloat(fixedResistanceInput.value);
+            if (!isNaN(val)) {
+                R_wall_parts += val;
+            }
+        }
+    } else {
+        // 동적 레이어 (사용자 추가 레이어)
+        const materialNameInput = row.cells[0].querySelector('input');
+        const thicknessVal = parseFloat(row.cells[1].querySelector('input').value);
+        const lambdaVal = parseFloat(row.cells[2].querySelector('input').value);
+        const resistanceVal = parseFloat(row.cells[3].querySelector('input.resistance').value);
+
+        // 재료명, 두께, 람다가 모두 유효하게 입력되어 열저항이 계산된 경우에만 합산
+        if (materialNameInput && materialNameInput.value.trim() !== "" &&
+            !isNaN(thicknessVal) && thicknessVal > 0 &&
+            !isNaN(lambdaVal) && lambdaVal > 0 &&
+            !isNaN(resistanceVal) && resistanceVal > 0) {
+            R_wall_parts += resistanceVal;
+            userLayersValid = true; // 유효한 사용자 레이어가 하나 이상 존재
+        } else if (materialNameInput && materialNameInput.value.trim() !== "") {
+            // 재료명은 있으나 다른 값이 유효하지 않은 경우
+            alert(`레이어 "${materialNameInput.value}"의 두께 또는 열전도율 값이 유효하지 않습니다. 해당 레이어는 계산에서 제외됩니다.`);
         }
     }
-  });
-  
-  // 고정된 실내외 열전달저항 더하기
-  const fixedResistances = document.querySelectorAll("#layerTable tbody tr.fixed-layer .resistance");
-  fixedResistances.forEach(r => {
-    const val = parseFloat(r.value);
-    if (!isNaN(val)) R_wall_parts += val;
-  });
+  }
 
-  if (!hasUserLayer) {
-      alert("하나 이상의 벽체 레이어를 구성하고 재료 정보를 입력해주세요.");
+  if (!userLayersValid && layerRows.filter(r => !r.classList.contains('fixed-layer')).length > 0) {
+      alert("하나 이상의 벽체 레이어에 유효한 재료, 두께, 열전도율 정보를 입력해주세요.");
       return;
   }
+
 
   const U_target = uStandardTable[zone][region];
   const R_required_total = 1 / U_target;
-  
-  // 벽체 자체의 열저항 (R_wall_parts) 만으로는 목표를 달성할 수 없음.
-  // 단열재가 추가될 때, 그 단열재가 감당해야 할 열저항은 R_insulation_needed
-  // 현재 로직은 '추가 단열재'가 아니라 '지정된 두께'의 단열재를 위한 lambda_max를 찾음.
-  // R_wall_parts는 현재 *모든* 레이어(고정저항 포함)의 합.
-  // 필요한 단열재의 열저항: R_insulation_needed = R_required_total - (R_wall_parts - R_of_insulation_being_calculated)
-  // 현재 계산 방식은 지정된 두께(thickness)의 "어떤 단열재"를 사용했을 때, 그 단열재의 최대 허용 lambda를 찾는 것.
-  // 여기서 R_wall은 사용자가 입력한 다른 레이어들의 열저항의 합 + 고정 열저항.
-  // 이 R_wall에 thickness/lambda_max를 더했을 때 R_required_total이 되어야 함.
-  // R_wall_parts (현재 모든 레이어 저항 합) + thickness/lambda_max = R_required_total
-  // thickness/lambda_max = R_required_total - R_wall_parts
-  // lambda_max = thickness / (R_required_total - R_wall_parts)
 
-  const R_additional_needed_from_insulation = R_required_total - R_wall_parts;
+  // R_additional_needed_from_insulation 은 사실상 (R_required_total - R_wall_parts)
+  // 만약 이 값이 0 이하면 이미 만족.
+  // 이 값은 지정된 두께(thickness)의 "어떤 단열재"가 제공해야 하는 열저항.
+  const R_insulation_must_provide = R_required_total - R_wall_parts;
 
-  if (R_additional_needed_from_insulation <= 0) {
-      // 이미 기준을 만족하거나 초과한 경우
-      const current_U_wall = R_wall_parts > 0 ? (1 / R_wall_parts).toFixed(3) : "∞";
-      document.getElementById("result").innerHTML = `<p>📌 기준 열관류율: <b>${U_target} W/㎡·K</b></p>
-        <p>🧮 현재 벽체 총 열저항 (R_total): <b>${R_wall_parts.toFixed(3)} m²·K/W</b></p>
-        <p>🧮 현재 벽체 열관류율 (U): <b>${current_U_wall} W/㎡·K</b></p>
-        <p>✅ 현재 구성으로 이미 법적 기준 열관류율(<b>${U_target} W/㎡·K</b>)을 만족합니다. 
-           (필요 추가 열저항 ≤ 0)</p>`;
-      return;
-  }
-
-  const lambda_max = thickness / R_additional_needed_from_insulation;
 
   const resultDiv = document.getElementById("result");
   const current_U_wall = R_wall_parts > 0 ? (1 / R_wall_parts).toFixed(3) : "∞";
 
-  resultDiv.innerHTML = `<p>📌 기준 열관류율 (U_target): <b>${U_target} W/㎡·K</b> (목표 총 열저항 R_required_total: ${R_required_total.toFixed(3)} m²·K/W)</p>
-    <p>🧱 현재 구성된 레이어들의 총 열저항 (R_wall_parts): <b>${R_wall_parts.toFixed(3)} m²·K/W</b> (현재 열관류율 U_wall_parts: ${current_U_wall} W/㎡·K)</p>
-    <p>🔥 지정된 두께(${insulationThicknessInput.value}mm)의 단열재가 추가로 제공해야 하는 열저항 (R_insulation_needed): <b>${R_additional_needed_from_insulation.toFixed(3)} m²·K/W</b></p>
-    <p>🎯 해당 두께(${insulationThicknessInput.value}mm)로 위 열저항을 만족하기 위한 최대 허용 열전도율 (λ_max) ≤ <b>${lambda_max.toFixed(3)} W/m·K</b></p>
-    <h3>✅ 추천 단열재 (λ ≤ ${lambda_max.toFixed(3)})</h3>`;
-
-  const ul = document.createElement("ul");
-  let found = false;
-  for (const ins of insulationList) {
-    if (ins.lambda <= lambda_max) {
-      const li = document.createElement("li");
-      li.textContent = `${ins.name} (λ=${ins.lambda}, ${ins.grade || '정보없음'}, ${ins.price ? ins.price + '원/㎡' : '가격정보없음'})`;
-      ul.appendChild(li);
-      found = true;
-    }
-  }
-  if (!found) {
-    const li = document.createElement("li");
-    li.textContent = "추천 단열재 없음 (기준을 만족하는 단열재가 목록에 없거나, λ_max가 매우 낮습니다).";
-    ul.appendChild(li);
-  }
-  resultDiv.appendChild(ul);
-}
-
-// 페이지 로드 시 단열재 목록 테이블 및 datalist 업데이트
-updateInsulationTable();
-</script>
-</body>
-</html>
+  if (R_insulation_must_provide <= 0) {
+      resultDiv.innerHTML = `<p>📌 기준 열관류율 (U_target): <b>${U_target.toFixed(3)} W/㎡·K</b> (목표 총 열저항 R_total_req: <span class="math-inline">\{R\_required\_total\.toFixed\(3\)\} m²·K/W\)</p\>
+<p\>🧱 현재 구성된 모든 레이어의 총 열저항 \(R\_current\_total\)\: <b\></span>{R_wall_parts.toFixed(3)} m²·K/W</b> (현재 총 열관류율 U_current_total: ${current_U_wall} W/㎡·K)</p>
+        <p style="color: green;">✅ 현재 구성으로 이미 법적 기준 열
