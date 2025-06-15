@@ -1,34 +1,40 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>단열재 추천 계산기</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    .tab { display: none; }
-    .tab.active { display: block; }
-    button.tab-btn { margin-right: 10px; padding: 10px 20px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-    th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: center; }
-    input, select { width: 140px; }
-    .grade-A { background-color: #d4f8cc; }
-    .grade-B { background-color: #fff8b2; }
-    .grade-C { background-color: #ffe0b2; }
-    .grade-D { background-color: #f8cccc; }
-    #result { margin-top: 30px; }
-  </style>
+  <meta charset="UTF-8">
+  <title>단열재 추천 및 열관류율 계산기</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<h2>📦 단열재 추천 계산기</h2>
-<div>
-  <button class="tab-btn" onclick="switchTab('calculator')">계산기</button>
-  <button class="tab-btn" onclick="switchTab('database')">단열재 목록</button>
-</div>
 
-<div class="tab active" id="calculator">
-  <h3>📐 벽체 레이어 구성</h3>
-  <datalist id="insulationNames"></datalist>
+  <h2>📦 단열재 추천 및 열관류율 계산기</h2>
+
+  <!-- 지역 및 부위 선택 -->
+  <div>
+    <label for="region">지역:</label>
+    <select id="region">
+      <option value="중부1">중부1지역</option>
+      <option value="중부2">중부2지역</option>
+      <option value="남부">남부지역</option>
+    </select>
+
+    <label for="part">부위:</label>
+    <select id="part">
+      <option value="외벽">외벽</option>
+      <option value="지붕">지붕</option>
+      <option value="바닥">바닥</option>
+    </select>
+  </div>
+
+  <!-- 재료 선택 드롭다운 -->
+  <div>
+    <strong>📌 적용할 재료 선택</strong><br>
+    <select id="materialSelect"></select>
+    <button onclick="applyMaterial()">선택 레이어에 적용</button>
+  </div>
+
+  <!-- 벽체 레이어 구성 표 -->
+  <h3>🧱 벽체 레이어 구성</h3>
   <table id="layerTable">
     <thead>
       <tr>
@@ -39,294 +45,25 @@
         <th>삭제</th>
       </tr>
     </thead>
-    <tbody>
-      <tr class="fixed-layer">
-        <td><input type="text" readonly value="실외 열전달저항"></td>
-        <td><input type="number" readonly value="0"></td>
-        <td><input type="text" readonly value="-"></td>
-        <td><input class="resistance" type="number" readonly value="0.043"></td>
-        <td></td>
-      </tr>
-      <tr> <td>
-          <input type="text" list="insulationNames" placeholder="재료명 입력 또는 선택"
-                 onchange="fillFromInput(this)"
-                 onfocus="handleMaterialFocus(this)"
-                 onblur="handleMaterialBlur(this)">
-          </td>
-        <td><input type="number" oninput="updateResistance(this)"></td>
-        <td><input type="number" oninput="updateResistance(this)"></td>
-        <td><input class="resistance" type="number" readonly></td>
-        <td><button onclick="removeRow(this)">삭제</button></td>
-      </tr>
-      <tr class="fixed-layer">
-        <td><input type="text" readonly value="실내 열전달저항"></td>
-        <td><input type="number" readonly value="0"></td>
-        <td><input type="text" readonly value="-"></td>
-        <td><input class="resistance" type="number" readonly value="0.11"></td>
-        <td></td>
-      </tr>
+    <tbody id="layerBody">
+      <tr><td>실외 열전달저항</td><td>0</td><td>-</td><td>0.043</td><td></td></tr>
+      <tr><td>실내 열전달저항</td><td>0</td><td>-</td><td>0.110</td><td></td></tr>
     </tbody>
   </table>
-  <button onclick="addRow()">레이어 추가</button>
-  <h4>단열재 두께 (mm): <input id="insulationThickness" type="number"/></h4>
-  <h4>지역:
-    <select id="region">
-      <option value="중부1">중부1</option>
-      <option value="중부2">중부2</option>
-      <option value="남부">남부</option>
-      <option value="제주">제주</option>
-    </select>
-    부위:
-    <select id="zone">
-      <option value="외벽">외벽</option>
-      <option value="지붕">지붕</option>
-      <option value="바닥">바닥</option>
-    </select>
-  </h4>
-  <button onclick="calculate()">추천</button>
-  <button onclick="window.print()">📄 PDF 저장</button>
-  <div id="result"></div>
-</div>
 
-<div class="tab" id="database">
-  <h3>📋 단열재 목록</h3>
-  <table id="insulationTable">
-    <thead><tr><th>이름</th><th>λ</th><th>등급</th><th>가격</th></tr></thead>
-    <tbody></tbody>
-  </table>
-  <h4>➕ 단열재 추가</h4>
-  <input id="newName" placeholder="이름" type="text"/>
-  <input id="newLambda" placeholder="λ (W/m·K)" type="number" step="0.001"/>
-  <input id="newGrade" placeholder="등급" type="text"/>
-  <input id="newPrice" placeholder="가격(원/㎡)" type="number"/>
-  <button onclick="addCustomInsulation()">추가</button>
-</div>
+  <button onclick="addLayer()">레이어 추가</button>
 
-<script>
-const uStandardTable = {
-  '외벽': { '중부1': 0.15, '중부2': 0.17, '남부': 0.22, '제주': 0.29 },
-  '지붕': { '중부1': 0.15, '중부2': 0.18, '남부': 0.25, '제주': 0.25 },
-  '바닥': { '중부1': 0.15, '중부2': 0.17, '남부': 0.22, '제주': 0.29 }
-};
+  <label>단열재 두께 (mm):</label>
+  <input type="number" id="defaultThickness" value="100" />
+  <button onclick="calculate()">계산 및 추천</button>
 
-let insulationList = [
-  {name: "PF보드 A", lambda: 0.019, grade: "불연", price: 22000},
-  {name: "경질우레탄 B", lambda: 0.025, grade: "준불연", price: 18000},
-  {name: "XPS C", lambda: 0.034, grade: "난연", price: 11000},
-  {name: "진공단열 D", lambda: 0.005, grade: "불연", price: 50000},
-  {name: "EPS E", lambda: 0.038, grade: "난연", price: 8000}
-];
+  <!-- 결과 표시 -->
+  <div id="result" class="result"></div>
 
-// 전역 변수로 포커스된 input의 원래 값을 저장
-let materialInputOriginalValue = '';
+  <!-- 외부 JS 모듈 로드 순서 중요 -->
+  <script src="materials.js"></script>
+  <script src="layers.js"></script>
+  <script src="recommend.js"></script>
 
-function handleMaterialFocus(inputElement) {
-    materialInputOriginalValue = inputElement.value;
-    inputElement.value = ''; // 값을 비워서 datalist가 모든 옵션을 보여주도록 함
-}
-
-function handleMaterialBlur(inputElement) {
-    // setTimeout을 사용하여 onchange가 발생하고 input.value가 업데이트될 시간을 약간 기다린 후 판단.
-    setTimeout(() => {
-        if (inputElement.value === '' && materialInputOriginalValue !== '') {
-            // 사용자가 포커스 후 값을 비우고, 새 값을 선택하지 않고 블러한 경우
-            inputElement.value = materialInputOriginalValue; // 원래 재료명으로 복원
-            fillFromInput(inputElement); // 복원된 재료명에 따라 람다 등 업데이트
-        }
-        // materialInputOriginalValue = ''; // 여기서 초기화하면 다른 input 간섭 가능성 있음. focus 시마다 설정.
-    }, 0);
-}
-
-function fillFromInput(input) { // input은 재료명 input element
-    const value = input.value;
-    const row = input.closest("tr");
-    const lambdaInput = row.cells[2].querySelector('input');
-    const insulation = insulationList.find(ins => ins.name === value);
-
-    if (insulation) {
-        lambdaInput.value = insulation.lambda;
-    } else {
-        // 목록에 없는 이름이거나, 이름이 지워진 경우
-        if (value === '') { // 사용자가 이름을 완전히 지웠다면
-            lambdaInput.value = '';
-        }
-        // 이름은 있지만 목록에 없는 경우, lambda는 사용자가 직접 입력하도록 현재 값 유지.
-    }
-    updateResistance(lambdaInput); // lambdaInput.value에 따라 R값 업데이트
-}
-
-function switchTab(id) {
-  document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-
-function updateResistance(input) {
-  const row = input.closest("tr");
-  // input이 속한 행의 두께(cells[1])와 열전도율(cells[2]) input을 찾음
-  const thicknessInput = row.cells[1].querySelector('input');
-  const lambdaInput = row.cells[2].querySelector('input'); // 이 input이 oninput을 호출한 주체일 수 있음
-
-  const t = parseFloat(thicknessInput.value) / 1000; // 두께 mm to m
-  const l = parseFloat(lambdaInput.value);         // 열전도율
-  const R_input = row.cells[3].querySelector('input'); // 열저항 input
-
-  if (!isNaN(t) && t >= 0 && !isNaN(l) && l > 0) {
-    R_input.value = (t / l).toFixed(3);
-  } else {
-    R_input.value = ''; // 유효하지 않으면 열저항 값 비움
-  }
-}
-
-
-function addRow() {
-  const tbody = document.querySelector("#layerTable tbody");
-  const row = document.createElement("tr");
-  row.innerHTML = `
-    <td>
-      <input type="text" list="insulationNames" placeholder="재료명 입력 또는 선택"
-             onchange="fillFromInput(this)"
-             onfocus="handleMaterialFocus(this)"
-             onblur="handleMaterialBlur(this)">
-    </td>
-    <td><input type="number" oninput="updateResistance(this)"></td>
-    <td><input type="number" oninput="updateResistance(this)" step="0.001"></td>
-    <td><input class="resistance" type="number" readonly></td>
-    <td><button onclick="removeRow(this)">삭제</button></td>
-  `;
-  const rows = tbody.querySelectorAll("tr");
-  tbody.insertBefore(row, rows[rows.length - 1]); // 마지막 고정행(실내 열전달저항) 바로 위에 삽입
-}
-
-function removeRow(btn) {
-  const row = btn.closest("tr");
-  // 고정된 행은 삭제하지 않도록 방지 (선택 사항, 현재는 class로 구분 가능)
-  if (!row.classList.contains('fixed-layer')) {
-      row.remove();
-  }
-}
-
-function updateInsulationTable() {
-  const tbody = document.querySelector("#insulationTable tbody");
-  tbody.innerHTML = ""; // 기존 목록 비우기
-  const datalist = document.getElementById("insulationNames");
-  if (!datalist) { // 혹시 datalist가 없는 경우를 대비 (정상적으론 항상 있어야 함)
-      console.error("Datalist 요소를 찾을 수 없습니다.");
-      return;
-  }
-  datalist.innerHTML = ""; // 기존 옵션 초기화
-
-  // insulationList를 lambda 값 기준으로 오름차순 정렬 (선택 사항)
-  // insulationList.sort((a, b) => a.lambda - b.lambda);
-
-  for (const item of insulationList) {
-    tbody.innerHTML += `<tr><td><span class="math-inline">\{item\.name\}</td\><td\></span>{item.lambda}</td><td><span class="math-inline">\{item\.grade \|\| '\-'\}</td\><td\></span>{item.price !== undefined ? item.price : '-'}</td></tr>`;
-    datalist.innerHTML += `<option value="${item.name}">`;
-  }
-}
-
-function addCustomInsulation() {
-  const nameInput = document.getElementById("newName");
-  const lambdaInput = document.getElementById("newLambda");
-  const gradeInput = document.getElementById("newGrade");
-  const priceInput = document.getElementById("newPrice");
-
-  const name = nameInput.value.trim();
-  const lambda = parseFloat(lambdaInput.value);
-  const grade = gradeInput.value.trim();
-  const price = parseFloat(priceInput.value);
-
-  if (!name) {
-    alert("단열재 이름을 입력하세요.");
-    nameInput.focus();
-    return;
-  }
-  if (isNaN(lambda) || lambda <= 0) {
-    alert("유효한 열전도율(λ) 값을 입력하세요 (0보다 큰 숫자).");
-    lambdaInput.focus();
-    return;
-  }
-  if (insulationList.some(item => item.name.toLowerCase() === name.toLowerCase())) {
-    alert("이미 존재하는 단열재 이름입니다.");
-    nameInput.focus();
-    return;
-  }
-
-  insulationList.push({name, lambda, grade: grade || undefined, price: isNaN(price) ? undefined : price});
-  updateInsulationTable(); // 목록 및 datalist 업데이트
-
-  // 입력 필드 초기화
-  nameInput.value = '';
-  lambdaInput.value = '';
-  gradeInput.value = '';
-  priceInput.value = '';
-}
-
-function calculate() {
-  const region = document.getElementById('region').value;
-  const zone = document.getElementById('zone').value;
-  const insulationThicknessInput = document.getElementById('insulationThickness');
-  const thickness = parseFloat(insulationThicknessInput.value) / 1000; // mm to m
-
-  if (isNaN(thickness) || thickness <= 0) {
-    alert("단열재 두께를 올바르게 입력하세요 (0보다 큰 값).");
-    insulationThicknessInput.focus();
-    return;
-  }
-
-  let R_wall_parts = 0; // 사용자가 구성한 레이어들의 열저항 합 (고정 저항 제외)
-  let userLayersValid = false; // 사용자가 유효한 레이어를 하나라도 구성했는지 확인
-
-  const layerRows = Array.from(document.querySelectorAll("#layerTable tbody tr"));
-
-  for (const row of layerRows) {
-    if (row.classList.contains('fixed-layer')) {
-        const fixedResistanceInput = row.cells[3].querySelector('input.resistance');
-        if (fixedResistanceInput) {
-            const val = parseFloat(fixedResistanceInput.value);
-            if (!isNaN(val)) {
-                R_wall_parts += val;
-            }
-        }
-    } else {
-        // 동적 레이어 (사용자 추가 레이어)
-        const materialNameInput = row.cells[0].querySelector('input');
-        const thicknessVal = parseFloat(row.cells[1].querySelector('input').value);
-        const lambdaVal = parseFloat(row.cells[2].querySelector('input').value);
-        const resistanceVal = parseFloat(row.cells[3].querySelector('input.resistance').value);
-
-        // 재료명, 두께, 람다가 모두 유효하게 입력되어 열저항이 계산된 경우에만 합산
-        if (materialNameInput && materialNameInput.value.trim() !== "" &&
-            !isNaN(thicknessVal) && thicknessVal > 0 &&
-            !isNaN(lambdaVal) && lambdaVal > 0 &&
-            !isNaN(resistanceVal) && resistanceVal > 0) {
-            R_wall_parts += resistanceVal;
-            userLayersValid = true; // 유효한 사용자 레이어가 하나 이상 존재
-        } else if (materialNameInput && materialNameInput.value.trim() !== "") {
-            // 재료명은 있으나 다른 값이 유효하지 않은 경우
-            alert(`레이어 "${materialNameInput.value}"의 두께 또는 열전도율 값이 유효하지 않습니다. 해당 레이어는 계산에서 제외됩니다.`);
-        }
-    }
-  }
-
-  if (!userLayersValid && layerRows.filter(r => !r.classList.contains('fixed-layer')).length > 0) {
-      alert("하나 이상의 벽체 레이어에 유효한 재료, 두께, 열전도율 정보를 입력해주세요.");
-      return;
-  }
-
-
-  const U_target = uStandardTable[zone][region];
-  const R_required_total = 1 / U_target;
-
-  // R_additional_needed_from_insulation 은 사실상 (R_required_total - R_wall_parts)
-  // 만약 이 값이 0 이하면 이미 만족.
-  // 이 값은 지정된 두께(thickness)의 "어떤 단열재"가 제공해야 하는 열저항.
-  const R_insulation_must_provide = R_required_total - R_wall_parts;
-
-
-  const resultDiv = document.getElementById("result");
-  const current_U_wall = R_wall_parts > 0 ? (1 / R_wall_parts).toFixed(3) : "∞";
-
-  if (R_insulation_must_provide <= 0) {
-      resultDiv.innerHTML = `<p>📌 기준 열관류율 (U_target): <b>${U_target.toFixed(3)} W/㎡·K</b> (목표 총 열저항 R_total_req: <span class="math-inline">\{R\_required\_total\.toFixed\(3\)\} m²·K/W\)</p\>
-<p\>🧱 현재 구성된 모든 레이어의 총 열저항 \(R\_current\_total\)\: <b\></span>{R_wall_parts.toFixed(3)} m²·K/W</b> (현재 총 열관류율 U_current_total: ${current_U_wall} W/㎡·K)</p>
-        <p style="color: green;">✅ 현재 구성으로 이미 법적 기준 열
+</body>
+</html>
